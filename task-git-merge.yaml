@@ -1,0 +1,144 @@
+﻿apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: git-merge
+  namespace: ansible-cicd
+spec:
+  description: Merge main branch to development
+  params:
+    - default: main
+      description: Branch to merge from
+      name: sourcebranch
+      type: string
+    - default: development
+      description: Branch to merge to
+      name: destinationbranch
+      type: string
+    - default: Tekton Pipeline
+      description: |
+        Git user name for performing git operation.
+      name: gitUserName
+      type: string
+    - default: donotreply@ansible-pipeline.dev
+      description: |
+        Git user email for performing git operation.
+      name: gitUserEmail
+      type: string
+    - default: 'true'
+      description: Push branch after merging
+      name: push
+      type: string
+    - default: 'true'
+      description: Log commands that are executed during merge operation.
+      name: verbose
+      type: string
+    - default: /root
+      description: |
+        Absolute path to the user's home directory.
+      name: userHome
+      type: string
+    - default: ''
+      name: git-repository-ssh-url
+      type: string
+  steps:
+    - env:
+        - name: WORKSPACE_OUTPUT_PATH
+          value: $(workspaces.output.path)
+        - name: WORKSPACE_BASIC_AUTH_DIRECTORY_BOUND
+          value: $(workspaces.basic-auth.bound)
+        - name: WORKSPACE_BASIC_AUTH_DIRECTORY_PATH
+          value: $(workspaces.basic-auth.path)
+        - name: PARAM_VERBOSE
+          value: $(params.verbose)
+        - name: PARAM_SOURCE_BRANCH
+          value: $(params.sourcebranch)
+        - name: PARAM_DESTINATION_BRANCH
+          value: $(params.destinationbranch)
+        - name: PARAM_USER_HOME
+          value: $(params.userHome)
+        - name: PARAM_GIT_USER_NAME
+          value: $(params.gitUserName)
+        - name: PARAM_GIT_USER_EMAIL
+          value: $(params.gitUserEmail)
+        - name: PARAM_PUSH
+          value: $(params.push)
+        - name: GIT_SSH_URL
+          value: $(params.git-repository-ssh-url)
+      image: 'gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.29.0'
+      name: merge
+      resources: {}
+      script: >
+        #!/usr/bin/env sh
+
+        set -eu -o pipefail
+
+
+        if [ "${PARAM_VERBOSE}" = "true" ] ; then
+          set -x
+        fi
+
+
+        if [ "${WORKSPACE_BASIC_AUTH_DIRECTORY_BOUND}" = "true" ] ; then
+          cp "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.git-credentials" "${PARAM_USER_HOME}/.git-credentials"
+          cp "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.gitconfig" "${PARAM_USER_HOME}/.gitconfig"
+          chmod 400 "${PARAM_USER_HOME}/.git-credentials"
+          chmod 400 "${PARAM_USER_HOME}/.gitconfig"
+        fi
+
+
+        # silence fatal: detected dubious ownership in repository at
+
+        # '/workspace/output' messages. '/workspace/output' is owned
+
+        # by root.
+
+        /usr/bin/git config --global --add safe.directory /workspace/output
+
+
+        # Setting up the config for the git.
+
+        git config --global user.email "$PARAM_GIT_USER_EMAIL"
+
+        git config --global user.name "$PARAM_GIT_USER_NAME"
+
+
+        cd "$WORKSPACE_OUTPUT_PATH" || exit 1
+
+
+        echo "Merging ${PARAM_SOURCE_BRANCH} into ${PARAM_DESTINATION_BRANCH} in
+        ${WORKSPACE_OUTPUT_PATH}"
+
+        /usr/bin/git fetch
+
+        /usr/bin/git status
+
+        /usr/bin/git checkout "$PARAM_DESTINATION_BRANCH"
+
+        /usr/bin/git merge "$PARAM_SOURCE_BRANCH"
+
+        /usr/bin/git remote -v
+
+        ls -lart $HOME
+
+        #SLEEP=10000  #sleep "${SLEEP}"   
+
+        mkdir -p /root/.ssh/
+
+        chmod 0700 /root/.ssh
+
+        cp /workspace/github-secret/id_rsa /root/.ssh/id_rsa 
+
+
+        chmod 0600 /root/.ssh/id_rsa
+
+        id -u
+
+        git remote set-url origin $GIT_SSH_URL  
+
+        echo $HOME
+
+        /usr/bin/git push origin "$PARAM_DESTINATION_BRANCH"
+  workspaces:
+    - description: Directory containing the checked out ansible code repository
+      name: output
+    - name: github-secret

@@ -1,0 +1,20 @@
+﻿apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: ansible-pipeline-triggerbinding
+spec:
+  params:
+    - name: git-revision-before
+      value: $(body.before)
+    - name: git-revision-after
+      value: $(body.after)
+    - name: git-ref
+      value: $(body.repository.git_url)
+    - name: git-repository-url
+      value: $(body.repository.url)
+    - name: git-repository-ssh-url
+      value: $(body.repository.ssh_url)
+    - name: git-repository-pull-url
+      value: $(body.repository.pulls_url)
+    - name: git-branch-ref
+      value: $(body.ref)

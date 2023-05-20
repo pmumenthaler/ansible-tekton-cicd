@@ -1,0 +1,134 @@
+﻿apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  annotations:
+    operator.tekton.dev/prune.keep-since: '2880'
+    operator.tekton.dev/prune.resources: 'taskrun, pipelinerun'
+  name: ansible-pipeline
+spec:
+  description: |
+    This runs just a simple ansible playbook
+  params:
+    - default: 'https://github.com/pmumenthaler/simple-ansible.git'
+      description: the git repo url to run ansible
+      name: repo-url
+      type: string
+    - name: git-repository-ssh-url
+      type: string
+    - default: motd
+      description: controller job name to run in ansible controller
+      name: controller-job-name
+      type: string
+    - default: '''https://aap-kbctlr-aap.apps.ocp4.kubectl.rocks/'''
+      description: URL of the Automation Controller
+      name: controller-url
+      type: string
+    - default: 'https://api.github.com/repos/'
+      description: URL of the git repo provider like Github
+      name: git-repo-provider-url
+      type: string
+    - name: git-repository-pull-url
+      type: string
+    - default: development
+      name: git-branch-ref
+      type: string
+  tasks:
+    - name: fetch-source
+      params:
+        - name: url
+          value: $(params.repo-url)
+        - name: revision
+          value: main
+        - name: depth
+          value: '0'
+      taskRef:
+        kind: ClusterTask
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: ansible-ws
+    - name: ansible-lint
+      params:
+        - name: url
+          value: $(params.repo-url)
+      runAfter:
+        - fetch-source
+      taskRef:
+        kind: Task
+        name: ansible-lint
+      workspaces:
+        - name: output
+          workspace: ansible-ws
+    - name: controller-job
+      params:
+        - name: verbose
+          value: |-
+            true
+            true
+        - name: controller-token-secret
+          value: aap-ansible-cicd-secret
+        - name: controller-url
+          value: $(params.controller-url)
+        - name: controller-job-name
+          value: $(params.controller-job-name)
+        - name: job-suffix
+          value: $(params.git-branch-ref)
+        - name: controller-job-args
+          value: ''
+        - name: controller-workflow
+          value: 'false'
+      runAfter:
+        - git-merge
+      taskRef:
+        kind: Task
+        name: controller-job
+    - name: git-merge
+      params:
+        - name: sourcebranch
+          value: main
+        - name: destinationbranch
+          value: development
+        - name: gitUserName
+          value: Tekton Pipeline
+        - name: gitUserEmail
+          value: donotreply@ansible-pipeline.dev
+        - name: push
+          value: 'true'
+        - name: verbose
+          value: 'true'
+        - name: userHome
+          value: /root
+        - name: git-repository-ssh-url
+          value: $(params.git-repository-ssh-url)
+      runAfter:
+        - ansible-lint
+      taskRef:
+        kind: Task
+        name: git-merge
+      workspaces:
+        - name: output
+          workspace: ansible-ws
+        - name: github-secret
+          workspace: github-secret
+    - name: pull-request
+      params:
+        - name: verbose
+          value: 'true'
+        - name: sourceBranch
+          value: development
+        - name: destinationBranch
+          value: main
+        - name: gitTokenSecret
+          value: github-pat-secret
+        - name: gitURL
+          value: 'https://api.github.com'
+        - name: git-repository-pull-url
+          value: $(params.git-repository-pull-url)
+      runAfter:
+        - controller-job
+      taskRef:
+        kind: Task
+        name: pull-request
+  workspaces:
+    - name: ansible-ws
+    - name: github-secret

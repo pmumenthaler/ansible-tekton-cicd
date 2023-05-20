@@ -1,0 +1,17 @@
+﻿apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: ansible-pipeline
+spec:
+  namespaceSelector: {}
+  resources: {}
+  serviceAccountName: pipeline
+  triggers:
+    - bindings:
+        - kind: TriggerBinding
+          ref: ansible-pipeline-triggerbinding
+      name: trigger
+      template:
+        ref: ansible-pipeline
+  configuration:
+    generatedName: el-ansible-pipeline

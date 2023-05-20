@@ -1,0 +1,117 @@
+﻿apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: pull-request
+  namespace: ansible-cicd
+spec:
+  description: Create a pull request
+  params:
+    - default: 'false'
+      description: Log commands that are executed during merge operation.
+      name: verbose
+      type: string
+    - description: Source branch for the merge request
+      name: sourceBranch
+      type: string
+    - description: Destination branch for the merge request
+      name: destinationBranch
+      type: string
+    - default: gitea-developer-token
+      description: |
+        "Name of the secret storing the Git accces token in the key `token`."
+      name: gitTokenSecret
+      type: string
+    - default: 'http://gitea-http.gitea:3000'
+      description: |
+        "URL to reach the Git instance."
+      name: gitURL
+      type: string
+    - name: git-repository-pull-url
+      type: string
+  steps:
+    - env:
+        - name: PARAM_VERBOSE
+          value: $(params.verbose)
+        - name: PARAM_SOURCE_BRANCH
+          value: $(params.sourceBranch)
+        - name: PARAM_DESTINATION_BRANCH
+          value: $(params.destinationBranch)
+        - name: PARAM_GIT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: token
+              name: $(params.gitTokenSecret)
+        - name: PARAM_GIT_URL
+          value: $(params.gitURL)
+        - name: PARAM_GIT_PULL_URL
+          value: $(params.git-repository-pull-url)
+      image: 'quay.io/tosmi/ubi9-utils:latest'
+      name: pull-request
+      resources: {}
+      script: >
+        #!/bin/bash
+
+
+        set -eu -o pipefail
+
+
+        echo "Verbose           : ${PARAM_VERBOSE}"
+
+        echo "Source branch     : ${PARAM_SOURCE_BRANCH}"
+
+        echo "Destination branch: ${PARAM_DESTINATION_BRANCH}"
+
+        echo "Git token         : ${PARAM_GIT_TOKEN}"
+
+        echo "Git URL           : ${PARAM_GIT_URL}"
+
+        echo "Git pull URL      : ${PARAM_GIT_PULL_URL}"
+
+
+        if [ "${PARAM_VERBOSE}" = "true" ] ; then
+            set -x
+        fi
+
+
+        RED="\e[31m"
+
+        YELLOW="\e[33m"
+
+        BOLD="\033[1m"
+
+        NC="\e[0m"
+
+
+        error() {
+            local MESSAGE="$1"
+            local DATE
+
+            DATE=$(date "+%d/%b/%Y:%H:%M:%S %z")
+
+            # shellcheck disable=SC3037
+            echo -e "[${DATE}] ${RED}ERROR:${NC} $MESSAGE" >&2
+            exit 1
+        }
+
+
+        info() {
+            local MESSAGE="$1"
+            local DATE
+
+            DATE=$(date "+%d/%b/%Y:%H:%M:%S %z")
+
+            # shellcheck disable=SC3037
+            echo -e "[${DATE}] ${YELLOW}INFO:${NC} $MESSAGE" >&2
+
+            return 0
+        }
+
+
+        PATH=/bin:/usr/bin
+
+        HTTP_STATUS=$(curl -L   -X POST   -H "Accept:
+        application/vnd.github+json"   -H "Authorization: Bearer
+        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 "  -H "X-GitHub-Api-Version:
+        2022-11-28"   ${PARAM_GIT_PULL_URL}  -d '{"title":"Amazing new
+        feature","body":"Please pull these awesome changes
+        in!","head":"development","base":"production"}')

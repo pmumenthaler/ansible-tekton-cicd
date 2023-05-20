@@ -1,0 +1,64 @@
+﻿apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  creationTimestamp: '2023-05-11T11:55:50Z'
+  generation: 20
+  labels:
+    app.kubernetes.io/version: '0.1'
+  name: ansible-lint
+  namespace: ansible-cicd
+spec:
+  description: Run ansible lint on repository.
+  steps:
+    - env:
+        - name: WORKSPACE_OUTPUT_PATH
+          value: $(workspaces.output.path)
+      image: 'quay.io/ansible/creator-ee:v0.9.7'
+      name: lint
+      resources: {}
+      script: |
+        #!/usr/bin/env sh
+
+        set -eu -o pipefail
+
+        set -x
+
+        whoami
+
+        find "$WORKSPACE_OUTPUT_PATH" -ls
+
+        # silence fatal: detected dubious ownership in repository at
+        # '/workspace/output' messages. '/workspace/output' is owned
+        # by root.
+        /usr/bin/git config --global --add safe.directory /workspace/output
+
+        cd "$WORKSPACE_OUTPUT_PATH" || exit 1
+
+
+
+
+        RED="\e[31m"
+        YELLOW="\e[33m"
+        BOLD="\033[1m"
+        NC="\e[0m"
+
+        git remote -v
+
+        git status
+
+
+        git log --oneline
+
+        git branch
+
+        git checkout main
+
+        GIT_BRANCH=$(/usr/bin/git branch --show-current)
+
+        echo "Linting git branch ${GIT_BRANCH} in ${WORKSPACE_OUTPUT_PATH}"
+
+        /usr/local/bin/ansible-lint --version
+        /usr/local/bin/ansible-lint -v --nocolor --exclude collections/
+  workspaces:
+    - description: Directory containing a the ansible files to be linted
+      name: output

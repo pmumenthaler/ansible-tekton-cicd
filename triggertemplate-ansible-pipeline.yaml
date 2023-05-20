@@ -1,0 +1,44 @@
+﻿apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: ansible-pipeline
+spec:
+  params:
+    - description: The git repository url
+      name: git-repository-url
+    - description: The ref that triggered this run
+      name: git-ref
+    - name: git-repository-ssh-url
+    - name: git-repository-pull-url
+    - name: git-branch-ref
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: ansible-staging-
+      spec:
+        params:
+          - name: repository
+            value: $(tt.params.git-repository-url)
+          - name: ref
+            value: $(tt.params.git-ref)
+          - name: git-repository-ssh-url
+            value: $(tt.params.git-repository-ssh-url)
+          - name: git-repository-pull-url
+            value: $(tt.params.git-repository-pull-url)
+          - name: git-branch-ref
+            value: $(tt.params.git-branch-ref)
+        pipelineRef:
+          name: ansible-pipeline
+        workspaces:
+          - name: ansible-ws
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 200Mi
+          - name: github-secret
+            secret:
+              secretName: github-secret
