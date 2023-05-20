@@ -5,6 +5,8 @@
 
 [Tekton](https://tekton.dev/docs/cli/)
 
+or all via question mark item in the OpenShift Webconsole -> Command line tools
+
 
 
 ## Create the pipeline
