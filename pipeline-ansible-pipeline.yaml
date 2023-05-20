@@ -19,7 +19,7 @@ spec:
       description: controller job name to run in ansible controller
       name: controller-job-name
       type: string
-    - default: '''https://aap-kbctlr-aap.apps.ocp4.kubectl.rocks/'''
+    - default: 'https://aap-kbctlr-aap.apps.ocp4.kubectl.rocks/'
       description: URL of the Automation Controller
       name: controller-url
       type: string
@@ -28,6 +28,12 @@ spec:
       name: git-repo-provider-url
       type: string
     - name: git-repository-pull-url
+      type: string
+    - default: development
+      name: src-branch-ref
+      type: string
+    - default: production
+      name: dest-branch-ref
       type: string
     - default: development
       name: git-branch-ref
@@ -115,9 +121,9 @@ spec:
         - name: verbose
           value: 'true'
         - name: sourceBranch
-          value: development
+          value: $(params.src-branch-ref)
         - name: destinationBranch
-          value: main
+          value: $(params.dest-branch-ref)
         - name: gitTokenSecret
           value: github-pat-secret
         - name: gitURL
