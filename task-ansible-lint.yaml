@@ -6,7 +6,6 @@ metadata:
   labels:
     app.kubernetes.io/version: '0.1'
   name: ansible-lint
-  namespace: ansible-cicd
 spec:
   description: Run ansible lint on repository.
   steps:

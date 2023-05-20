@@ -2,7 +2,6 @@
 kind: Task
 metadata:
   name: git-merge
-  namespace: ansible-cicd
 spec:
   description: Merge main branch to development
   params:
