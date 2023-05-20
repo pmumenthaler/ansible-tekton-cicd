@@ -13,5 +13,3 @@ spec:
       name: trigger
       template:
         ref: ansible-pipeline
-  configuration:
-    generatedName: el-ansible-pipeline
