@@ -2,7 +2,6 @@
 kind: Task
 metadata:
   name: controller-job
-  namespace: ansible-cicd
 spec:
   description: Trigger an Automation Controller job via curl
   params:
