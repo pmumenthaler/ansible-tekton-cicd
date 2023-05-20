@@ -1,4 +1,4 @@
-# Ansible CI/CD with Tetkon
+# Ansible CI/CD with Tekton
 
 
 ## Download and install Tetkon and oc client
