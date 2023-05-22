@@ -47,5 +47,7 @@ oc create -f https://raw.githubusercontent.com/pmumenthaler/ansible-tekton-cicd/
 
 ```
 
-
-
+### expose service
+```sh
+oc expose svc/el-ansible-pipeline
+```
